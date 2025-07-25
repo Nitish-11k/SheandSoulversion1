@@ -12,7 +12,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.lowagie.text.DocumentException;
+import com.sheandsoul.v1update.entities.User;
+import com.sheandsoul.v1update.services.MyUserDetailService;
 import com.sheandsoul.v1update.services.PCOSReportService;
+import com.sheandsoul.v1update.services.SubscriptionService;
 
 import io.jsonwebtoken.io.IOException;
 import jakarta.persistence.EntityNotFoundException;
@@ -24,10 +27,12 @@ import lombok.RequiredArgsConstructor;
 public class ReportController {
 
     private final PCOSReportService pcosReportService;
+    private final MyUserDetailService userDetailService;
+    private final SubscriptionService subscriptionService;
 
     
-    @GetMapping("/pcos/my-report")
-    public ResponseEntity<byte[]> downloadMyPcosReport(Authentication authentication) throws Exception {
+@GetMapping("/pcos/my-report")
+    public ResponseEntity<?> downloadMyPcosReport(Authentication authentication) throws Exception {
         if (authentication == null || !authentication.isAuthenticated()) {
             return ResponseEntity.status(401).build();
         }
@@ -35,6 +40,11 @@ public class ReportController {
         try {
             // 2. Get the username (which is typically the email) from the principal
             String email = authentication.getName();
+            User user = userDetailService.findUserByEmail(email);
+
+            if (!subscriptionService.isPremium(user)) {
+                return ResponseEntity.status(403).body("This feature is only available for premium users.");
+            }
 
             // 3. Call the service to generate the PDF using the user's email
             byte[] pdfBytes = pcosReportService.generatePcosReportForUser(email);

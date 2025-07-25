@@ -338,7 +338,7 @@ public MenstrualTrackingDto updateMenstrualData(Long userId, MenstrualTrackingDt
         return riskLevel;
     }
 
-    private int calculateRiskScoreFromMcq(Map<String, String> answers) {
+private int calculateRiskScoreFromMcq(Map<String, String> answers) {
     int score = 0;
 
     // Menstrual & Reproductive History
@@ -359,7 +359,7 @@ public MenstrualTrackingDto updateMenstrualData(Long userId, MenstrualTrackingDt
     if ("OC_YES_LT_5Y".equals(answers.get("oral_contraceptives_use"))) score += 1;
     if ("OC_YES_GT_5Y".equals(answers.get("oral_contraceptives_use"))) score += 2;
 
-    // Also include the original high-impact factors
+// Also include the original high-impact factors
     if ("YES_FIRST_DEGREE".equals(answers.get("family_history"))) score += 5;
     if ("YES_ATYPICAL_HYPERPLASIA".equals(answers.get("personal_history_biopsy"))) score += 4;
     if ("AGE_50_PLUS".equals(answers.get("age_group"))) score += 4;
@@ -367,4 +367,7 @@ public MenstrualTrackingDto updateMenstrualData(Long userId, MenstrualTrackingDt
 
     return Math.max(0, score); // Ensure score doesn't go below 0
 }
+
+    public void addPartner(Long id, PartnerDataDto partnerDataDto) {
+    }
 }

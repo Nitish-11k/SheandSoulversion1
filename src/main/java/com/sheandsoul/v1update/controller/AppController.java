@@ -6,7 +6,6 @@ import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -21,14 +20,13 @@ import com.sheandsoul.v1update.dto.PartnerDataDto;
 import com.sheandsoul.v1update.dto.ProfileRequest;
 import com.sheandsoul.v1update.dto.ProfileResponse;
 import com.sheandsoul.v1update.dto.ProfileServiceDto;
-import com.sheandsoul.v1update.dto.SignUpRequest;
 import com.sheandsoul.v1update.dto.VerifyEmailRequest;
 import com.sheandsoul.v1update.entities.SymptomLocation;
 import com.sheandsoul.v1update.entities.SymptomSide;
 import com.sheandsoul.v1update.entities.User;
 import com.sheandsoul.v1update.services.AppService;
 import com.sheandsoul.v1update.services.MyUserDetailService;
-import com.sheandsoul.v1update.util.JwtUtil;
+import com.sheandsoul.v1update.services.SubscriptionService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -38,9 +36,9 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AppController {
 
-    private final AppService appService;
+private final AppService appService;
     private final MyUserDetailService userDetailsService;
-    private final JwtUtil jwtUtil;
+    private final SubscriptionService subscriptionService;
 
     @GetMapping("/partner")
     public ResponseEntity<?> getPartnerData(Authentication authentication) {
@@ -66,24 +64,6 @@ public class AppController {
             return ResponseEntity.ok(prediction);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    @PostMapping("/signup")
-    public ResponseEntity<?> signupUser(@Valid @RequestBody SignUpRequest signUpRequest) {
-        try {
-            User user = appService.registerUser(signUpRequest);
-            final UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
-
-            final String jwt = jwtUtil.generateToken(userDetails);
-            // In a real app, you'd return a JWT here instead of the full user object.
-            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                "message", "User registered successfully!",
-                "userId", user.getId(),
-                "jwt" , jwt           
-                 ));
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         }
     }
 
@@ -185,7 +165,7 @@ public ResponseEntity<?> loginUser(@Valid @RequestBody LoginRequest loginRequest
         }
     }
 
-    @PostMapping("/mcq-assessment")
+@PostMapping("/mcq-assessment")
     public ResponseEntity<?> submitMcqRiskAssessment(@RequestBody Map<String, String> answers, Authentication authentication) {
         try {
             User currentUser = userDetailsService.findUserByEmail(authentication.getName());
@@ -198,6 +178,17 @@ public ResponseEntity<?> loginUser(@Valid @RequestBody LoginRequest loginRequest
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
+    }
+
+    @PostMapping("/add-partner")
+    public ResponseEntity<?> addPartner(Authentication authentication, @RequestBody PartnerDataDto partnerDataDto) {
+        String username = authentication.getName();
+        User user = userDetailsService.findUserByEmail(username);
+        if (!subscriptionService.isPremium(user)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "This feature is only available for premium users."));
+        }
+        appService.addPartner(user.getId(), partnerDataDto);
+        return ResponseEntity.ok(Map.of("message", "Partner added successfully."));
     }
 
 }

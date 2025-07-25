@@ -33,4 +33,7 @@ public class User {
     @JsonBackReference
     private Profile profile;
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private Subscription subscription;
+
 }
